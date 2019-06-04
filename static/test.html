@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SWAT</title>
+    <link rel="stylesheet" href="/static/leaflet.css">
+    <link rel="stylesheet" href="/static/timePlay/css/timePlay.css">
+    <script src="/static/leaflet.js"></script>
+    <script src="/static/leaflet-src.js"></script>
+    <script src="/static/timePlay/js/timePlay.js"></script>
+    <script type="text/javascript" src="/static/jquery-3.3.1.min.js"></script> 
+
+<body>
+    <div id="map"></div>
+    <script type="text/javascript">
+
+
+    var map = new L.Map('map');
+    var osmUrl='http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    var osm = new L.TileLayer(osmUrl, {minZoom: 4, maxZoom: 13});
+    var RColor = function () {
+        var r = Math.round(Math.random() * 255), g = Math.round(Math.random() * 255), b = Math.round(Math.random() * 255);
+        var color = r << 16 | g << 8 | b;
+        return "#" + color.toString(16)
+}
+    $.get('/static/watershed.json',function(data){
+        var geolay = L.geoJSON(data, {
+            style: function (features) {
+                switch (features.properties.Subbasin) {
+
+                    case 1
+                    Math.floor(Math.random() * 100)
+                    :
+                        return {weight: 1, opacity: 1, dashArray: '3', fillOpacity: 0.1, color: RColor()};
+                    default:return { weight: 1, opacity: 1, dashArray: '3', fillOpacity: 0.1,color:"#00cdff"}}
+
+            }
+    });
+        geolay.addTo(map);
+    });
+
+    var rainIcon = L.icon({
+        iconUrl: '/static/rain1.png',
+        iconSize: [16, 16]
+    });
+
+    var hydIcon = L.icon({
+        iconUrl: '/static/loca.png',
+        iconSize: [16, 16]
+    });
+    function onMarkerClick(e) {
+        $('#zdj_chart_nav li').removeClass('open active');
+        if (e.target.feature.properties.Type == 'L') {
+            $('#zdj_chart_nav li').eq(0).addClass('open active');
+            var t = $("#myselect").val();
+            $("#myselect").eq(0).val(1);
+            var p = $("#myguage").val(e.target.feature.properties.Subbasin);
+            $("#myselect").trigger('change');
+
+        } else {
+            $('#zdj_chart_nav li').eq(6).addClass('open active');
+            var t = $("#myselect").val();
+            $("#myselect").eq(0).val(7);
+            var v = $("#pguage option:contains(" + e.target.feature.properties.Name + ")").val();
+            $("#pguage").val(v);
+            $("#myselect").trigger('change');
+        }
+
+        var c = $("#myselect").val();
+
+        if (c < 7) {
+            $("#pricipitationdiv").css('display', 'none');
+            $("#tempturediv").css('display', 'none');
+            $("#hydrologicdiv").css('display', 'none');
+            $("#hydrologicdiv").css('display', 'block');
+            var $this = $('#hydrologicdiv .chosen-select');
+            $this.next().css({'width': $this.parent().width()});
+        }
+        if (c == 7) {
+            $("#hydrologicdiv").css('display', 'none');
+            $("#tempturediv").css('display', 'none');
+            $("#pricipitationdiv").css('display', 'none');
+            $("#pricipitationdiv").css('display', 'block');
+            var $this = $('#pricipitationdiv .chosen-select');
+            $this.next().css({'width': $this.parent().width()});
+        }
+        if (c == 8) {
+            $("#hydrologicdiv").css('display', 'none');
+            $("#pricipitationdiv").css('display', 'none');
+            $("#tempturediv").css('display', 'none');
+            $("#tempturediv").css('display', 'block');
+            var $this = $('#tempturediv .chosen-select');
+            $this.next().css({'width': $this.parent().width()});
+        }
+
+        $('#ace-chart-btn').addClass('open');
+        $('#ace-chart-box').addClass('open');
+    }
+    $.get("/static/monitorpoint.json", function (data) {
+        var geolay = L.geoJSON(data, {
+            pointToLayer: function (feature, latlng) {
+                // return L.circleMarker(latlng, geojsonMarkerOptions);
+                if (feature.properties.Type == "RNG") {
+                    return L.marker(latlng, {icon: rainIcon}).on('click', onMarkerClick);
+                }
+                else if (feature.properties.Type == "L") {
+                    return L.marker(latlng, {icon: hydIcon}).on('click', onMarkerClick);
+                }
+            }
+        });
+        geolay.addTo(map);
+        geolay.setStyle({
+            weight: 3,
+            opacity: 1,
+            color: 'red',
+            dashArray: '3',
+            fillOpacity: 0.1
+        });
+    });
+    map.addLayer(osm);
+    map.setView(new L.LatLng(25.2140, 118.2402),10);
+</script>
+</body>
+</html>

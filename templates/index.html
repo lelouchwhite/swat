@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>SWAT输出可视化系统（以晋江流域为例）</title>
+    <link rel="stylesheet" href="/static/leaflet.css">
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <script src="/static/leaflet.js"></script>
+    <script src="/static/layui/layui.js"></script>
+    <script src="/static/leaflet-src.js"></script>
+    <script src="/static/leaflet.ajax.min.js"></script>
+    <script src="/static/jquery-3.3.1.min.js"></script>
+    <script src="/static/lin.js"></script>
+    <style TYPE="text/css">
+        #map {
+            /*position: absolute;*/
+            height: 100%;
+            width: 100%;
+            z-index: 10;
+        }
+
+        #timer {
+            position: fixed;
+            opacity: 0.9;
+            z-index: 30;
+            right: 0;
+            top: 5%;
+        }
+
+        #lengend {
+            position: fixed;
+            opacity: 0.9;
+            top: 89%;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="layui-layout-body">
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo">SWAT输出可视化系统</div>
+        <!-- 头部区域（可配合layui已有的水平导航） -->
+        <ul class="layui-nav layui-layout-left">
+            <li class="layui-nav-item"><a href="/admin">控制台</a></li>
+            <li class="layui-nav-item"><a href="">管理</a></li>
+            <li class="layui-nav-item"><a href="">用户</a></li>
+            <li class="layui-nav-item">
+                <a href="javascript:;">其它系统</a>
+                <dl class="layui-nav-child">
+                    <dd><a href="">邮件管理</a></dd>
+                    <dd><a href="">消息管理</a></dd>
+                    <dd><a href="">授权管理</a></dd>
+                    <div id="test2"></div>
+                </dl>
+            </li>
+        </ul>
+        <ul class="layui-nav layui-layout-right">
+            <li class="layui-nav-item">
+                <a href="javascript:;">
+                    <img src="/static/timg.jpeg" class="layui-nav-img">
+                    LZW 
+                </a>
+                <dl class="layui-nav-child">
+                    <dd><a href="">基本资料</a></dd>
+                    <dd><a href="">安全设置</a></dd>
+                </dl>
+            </li>
+            <li class="layui-nav-item"><a href="">退了</a></li>
+        </ul>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+        <div class="layui-side-scroll">
+            <ul class="layui-nav layui-nav-tree">
+                <li class="layui-nav-item layui-nav-itemed">
+                    <dl class="layui-nav-child">
+                        <dd><a href="/">各流域径流量动态图</a></dd>
+                        <dd><a href="/nat">雨量流量关系图</a></dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="layui-body">
+        <div id="map"></div>
+        <div id="timer"></div>
+        <div id="lengend">
+            <img src="/static/legend.png" width="70%" height="70%"/>
+        </div>
+    </div>
+    <!--        <div style="padding: 15px;">内容主体区域</div>-->
+
+    <div class="layui-footer">
+        <!-- 底部固定区域 -->
+        <center>©厦门理工学院 xmut.edu.cn</center>
+    </div>
+</div>
+<script>
+    var col1 = '#ace8f0',
+        col2 = '#9df6a2',
+        col3 = '#2af689',
+        col4 = '#29bef6',
+        col5 = '#244cf6';
+    var style7 = function (feature) {
+        var way7 = feature.properties.Elev;
+        switch (true) {
+            case way7 < 200:
+                return {
+                    weight: 1,
+                    opacity: 0.9,
+                    color: col1
+                };
+            case way7 > 200 && way7 < 400:
+                return {
+                    weight: 1,
+                    opacity: 0.9,
+                    color: col2
+                };
+            case way7 > 400 && way7 < 600:
+                return {
+                    weight: 1,
+                    opacity: 0.9,
+                    color: col3
+                };
+            case way7 > 600 && way7 < 800:
+                return {
+                    weight: 1,
+                    opacity: 0.9,
+                    color: col4
+                };
+            default:
+                return {
+                    weight: 1,
+                    opacity: 0.9,
+                    color: col5
+                };
+        }
+    };
+    //随机颜色
+    var rcol = function (feature) {
+        var ra = feature.properties.Elev,
+            r1 = Math.floor((Math.random() * 200) + 1),
+            r2 = Math.floor((Math.random() * 200) + 200),
+            r3 = Math.floor((Math.random() * 200) + 400),
+            r4 = Math.floor((Math.random() * 200) + 600);
+        // console.log(r1,r2,r3,r4);
+        switch (true) {
+            case ra < r1:
+                return {color: col5};
+            case ra > r1 && ra < r2:
+                return {color: col1};
+            case ra > r2 && ra < r3:
+                return {color: col3};
+            case ra > r3 && ra < r4:
+                return {color: col2};
+            default:
+                return {color: col4};
+        }
+    };
+    var map = L.map('map').setView([25.2140, 118.2402], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {minZoom: 4, maxZoom: 13}).addTo(map);
+    // L.tileLayer('/static/legend.png', {minZoom: 4, maxZoom: 13}).addTo(map);
+    var data = '/static/watershed.json';
+    var geoLayer = new L.GeoJSON.AJAX(data, {
+        style: style7
+    });//加载外部JSON文件
+    geoLayer.addTo(map);
+
+    function test1() {
+        geoLayer.setStyle({
+            color: 'red'
+        })
+    }
+
+    //获取观测站点图标
+    $.getJSON("/static/monitorpoint.json", function (data) {
+        var geolay = L.geoJSON(data, {
+            pointToLayer: function (feature, latlng) {
+                // return L.circleMarker(latlng, geojsonMarkerOptions);
+                if (feature.properties.Type === "RNG") {
+                    return L.marker(latlng, {icon: rainIcon});//.on('click', onMarkerClick);
+                } else if (feature.properties.Type === "L") {
+                    return L.marker(latlng, {icon: hydIcon});//.on('click', onMarkerClick);
+                }
+            }
+        });
+        geolay.addTo(map);
+    });
+    layui.use('laydate', function () {
+        var laydate = layui.laydate;
+        var ins1 = laydate.render({
+                elem: '#timer'
+                , type: 'month'
+                , position: 'static'
+                , value: '2018-07'
+                , min: '2018-01-01'
+                , max: '2018-12-21'
+                , change: function (value, date) {
+                    if (date.year === 2018 && date.month === 7) {
+                        return geoLayer.setStyle(style7);
+                    } else {
+                        return geoLayer.setStyle(rcol);
+                    }
+                }
+            }
+        );
+    });
+</script>
+</body>
+</html>
